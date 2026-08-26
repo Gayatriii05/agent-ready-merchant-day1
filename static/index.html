@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent-Ready Merchant — Gated Agentic Commerce</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Space+Grotesk:wght@300..700&family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <!-- ======== Header ======== -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">ARM</div>
+      <div>
+        <h1>Agent-Ready Merchant</h1>
+        <p class="tagline">AI buyer &middot; policy-gated payments &middot; full audit trail</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="pill pill-live"><span class="dot"></span>LIVE</span>
+      <span class="pill pill-test">RAZORPAY TEST MODE</span>
+      <button id="themeToggleBtn" class="btn btn-ghost" title="Toggle Theme" aria-label="Toggle Theme">
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+      <button id="resetBtn" class="btn btn-ghost" title="Clear session + counters for a fresh demo run">Reset Demo</button>
+    </div>
+  </header>
+
+  <!-- ======== Main grid ======== -->
+  <main class="layout">
+
+    <!-- ---- Left: chat with the agent ---- -->
+    <section class="panel chat-panel">
+      <div class="panel-head">
+        <h2>Shopping Agent</h2>
+        <span class="sub">Gemini + tool calling &rarr; every buy passes the policy gate</span>
+      </div>
+
+      <div id="chatWindow" class="chat-window"></div>
+
+      <div class="chips" id="chips">
+        <button class="chip" data-msg="Show me what's in the catalog">Browse catalog</button>
+        <button class="chip" data-msg="I want to buy the White Sneakers">Buy sneakers</button>
+        <button class="chip" data-msg="Any clearance deals running right now?">Clearance deals</button>
+        <button class="chip" data-msg="Yes, go ahead and buy it at the discounted price">Confirm buy</button>
+        <button class="chip" data-msg="I'd like the Designer Sunglasses please">Needs confirmation</button>
+        <button class="chip" data-msg="Try to buy something costing 5000 rupees">Over limit</button>
+      </div>
+
+      <form id="chatForm" class="chat-input-row">
+        <input id="chatInput" type="text" autocomplete="off"
+               placeholder="Talk to your AI shopper… e.g. “buy white sneakers”">
+        <button type="submit" class="btn btn-primary" id="sendBtn">Send</button>
+      </form>
+    </section>
+
+    <!-- ---- Right: metrics + live audit trail ---- -->
+    <section class="right-col">
+
+      <div class="metrics-grid">
+        <div class="stat-card" id="card-sales">
+          <span class="stat-label">Total Sales</span>
+          <span class="stat-value" id="m-total-revenue">₹0</span>
+          <span class="stat-sub" id="m-total-count">0 orders</span>
+        </div>
+        <div class="stat-card accent-up" id="card-upsell">
+          <span class="stat-label">Upsell Revenue Added</span>
+          <span class="stat-value" id="m-upsell">₹0</span>
+          <span class="stat-sub" id="m-upsell-count">0 accepted</span>
+        </div>
+        <div class="stat-card accent-camp" id="card-campaign">
+          <span class="stat-label">Campaign Revenue</span>
+          <span class="stat-value" id="m-campaign">₹0</span>
+          <span class="stat-sub" id="m-campaign-sub">₹0 discounts given</span>
+        </div>
+        <div class="stat-card accent-block" id="card-blocked">
+          <span class="stat-label">Blocked Attempts</span>
+          <span class="stat-value" id="m-blocked">0</span>
+          <span class="stat-sub" id="m-confirm-sub">0 needed confirmation</span>
+        </div>
+      </div>
+
+      <div class="panel audit-panel">
+        <div class="panel-head">
+          <h2>Audit Trail</h2>
+          <span class="sub">agent intent + policy mandate &rarr; as it happens</span>
+        </div>
+        <div id="auditList" class="audit-list"></div>
+      </div>
+
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

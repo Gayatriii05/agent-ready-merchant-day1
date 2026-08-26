@@ -1,0 +1,105 @@
+{
+  "merchant": {
+    "id": "merchant_001",
+    "name": "Urban Threads Apparel",
+    "currency": "INR"
+  },
+  "products": [
+    {
+      "id": "prod_001",
+      "name": "Classic Blue T-Shirt",
+      "category": "apparel",
+      "price": 499,
+      "stock": 11,
+      "description": "100% cotton, regular fit, blue crew neck t-shirt."
+    },
+    {
+      "id": "prod_002",
+      "name": "Black Denim Jacket",
+      "category": "apparel",
+      "price": 1899,
+      "stock": 5,
+      "description": "Slim-fit black denim jacket, unisex."
+    },
+    {
+      "id": "prod_003",
+      "name": "White Sneakers",
+      "category": "footwear",
+      "price": 2299,
+      "stock": 8,
+      "description": "Minimalist white sneakers, true to size."
+    },
+    {
+      "id": "prod_004",
+      "name": "Canvas Tote Bag",
+      "category": "accessories",
+      "price": 349,
+      "stock": 14,
+      "description": "Durable canvas tote, natural color."
+    },
+    {
+      "id": "prod_005",
+      "name": "Leather Wallet",
+      "category": "accessories",
+      "price": 899,
+      "stock": 15,
+      "description": "Genuine leather bifold wallet, brown."
+    },
+    {
+      "id": "prod_006",
+      "name": "Premium Wool Sweater",
+      "category": "apparel",
+      "price": 2599,
+      "stock": 4,
+      "description": "Merino wool blend sweater, charcoal grey."
+    },
+    {
+      "id": "prod_007",
+      "name": "Striped Polo Shirt",
+      "category": "apparel",
+      "price": 799,
+      "stock": 2,
+      "description": "Navy and white striped polo, breathable cotton. Low stock - good candidate for a clearance push."
+    },
+    {
+      "id": "prod_008",
+      "name": "Running Shorts",
+      "category": "apparel",
+      "price": 599,
+      "stock": 18,
+      "description": "Lightweight quick-dry running shorts with side pockets."
+    },
+    {
+      "id": "prod_009",
+      "name": "Leather Belt",
+      "category": "accessories",
+      "price": 449,
+      "stock": 24,
+      "description": "Classic brown leather belt, single prong buckle."
+    },
+    {
+      "id": "prod_010",
+      "name": "Ankle Socks (Pack of 3)",
+      "category": "accessories",
+      "price": 249,
+      "stock": 29,
+      "description": "Cotton blend ankle socks, pack of 3, great add-on item."
+    },
+    {
+      "id": "prod_011",
+      "name": "Canvas Sneakers",
+      "category": "footwear",
+      "price": 1499,
+      "stock": 10,
+      "description": "Low-top canvas sneakers, casual everyday wear."
+    },
+    {
+      "id": "prod_012",
+      "name": "Designer Sunglasses",
+      "category": "accessories",
+      "price": 3499,
+      "stock": 6,
+      "description": "UV-protected designer sunglasses. Above the auto-purchase ceiling - requires human confirmation."
+    }
+  ]
+}
