@@ -13,15 +13,28 @@ Frontend is served at http://localhost:8000/
 
 import uuid
 import threading
+import json
+import csv
+import io
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+
+class NoCacheStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope: dict) -> Response:
+        response: Response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+
 from agent.agent import MerchantAgent
+from agent.buyer_agent import BuyerAgent
 from catalog.store import load_catalog
-from logs.audit import read_log
+from logs.audit import read_log, clear_log
 from metrics.metrics import compute_metrics
 from gating.policy import _build_mandate
 
@@ -63,6 +76,8 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     session_id: str
     reply: str
+    products: list[dict] = []
+    actions: list[dict] = []
 
 
 # ---------------------------------------------------------------------------
@@ -130,6 +145,89 @@ def get_metrics():
 
 
 # ---------------------------------------------------------------------------
+# Multi-agent negotiation simulation
+# ---------------------------------------------------------------------------
+
+class SimulateRequest(BaseModel):
+    budget: int = 2000
+    goal: str = "buy a complete outfit"
+
+
+@app.post("/simulate-negotiation")
+def simulate_negotiation(req: SimulateRequest):
+    """
+    Trigger a BuyerAgent vs MerchantAgent negotiation simulation.
+    The buyer has a fixed budget and shopping goal, and programmatically
+    attempts purchases through the same policy gate. All events land in
+    the audit trail with event_type 'agent_to_agent' for visual distinction.
+    """
+    # Reset session state for a clean negotiation
+    buyer = BuyerAgent(budget=req.budget, goal=req.goal)
+    result = buyer.run()
+    return {
+        "status": "complete",
+        "summary": {
+            "budget": result["budget"],
+            "total_spent": result["total_spent"],
+            "items_purchased": result["items_purchased"],
+            "items_rejected": result["items_rejected"],
+        },
+        "purchases": result["purchases"],
+        "rejections": result["rejections"],
+        "log": result["log"],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Audit trail export
+# ---------------------------------------------------------------------------
+
+@app.get("/audit-log/export")
+def export_audit_log(fmt: str = "json"):
+    """
+    Export the current session's audit trail as a downloadable JSON or CSV file.
+    Useful for compliance reporting and pitch demos.
+    """
+    events = read_log()
+
+    if fmt == "csv":
+        output = io.StringIO()
+        if events:
+            # Flatten nested dicts for CSV
+            flat_events = []
+            for ev in events:
+                flat = {}
+                for k, v in ev.items():
+                    if isinstance(v, dict):
+                        flat[k] = json.dumps(v)
+                    elif isinstance(v, list):
+                        flat[k] = json.dumps(v)
+                    else:
+                        flat[k] = v
+                flat_events.append(flat)
+
+            writer = csv.DictWriter(output, fieldnames=flat_events[0].keys())
+            writer.writeheader()
+            writer.writerows(flat_events)
+        else:
+            output.write("No audit events recorded.\n")
+
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=audit_trail.csv"},
+        )
+    else:
+        # JSON format
+        json_data = json.dumps(events, indent=2, ensure_ascii=False)
+        return StreamingResponse(
+            iter([json_data]),
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=audit_trail.json"},
+        )
+
+
+# ---------------------------------------------------------------------------
 # Agent chat
 # ---------------------------------------------------------------------------
 
@@ -148,8 +246,13 @@ def chat(req: ChatRequest):
     if agent.last_suggestion and any(w in lowered for w in ("no thanks", "nope", "decline", "not interested")):
         agent.record_user_rejection(agent.last_suggestion["product"]["id"])
 
-    reply = agent.chat(req.message)
-    return ChatResponse(session_id=session_id, reply=reply)
+    reply, structured = agent.chat(req.message)
+    return ChatResponse(
+        session_id=session_id,
+        reply=reply,
+        products=structured.get("products", []),
+        actions=structured.get("actions", []),
+    )
 
 
 @app.post("/session/reset")
@@ -176,7 +279,7 @@ def index():
 
 
 # CSS/JS assets for the dashboard
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 
 
 @app.get("/health")

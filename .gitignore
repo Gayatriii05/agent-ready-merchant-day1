@@ -12,6 +12,6 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Logs
+# Logs — ignore runtime data only, keep source modules (logs/audit.py)
 *.log
-logs/
+logs/*.jsonl

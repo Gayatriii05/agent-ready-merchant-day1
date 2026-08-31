@@ -158,6 +158,8 @@ class MerchantAgent:
             ),
         )
         self.last_suggestion: dict | None = None  # {'for': pid, 'product': {...}}
+        self._turn_products: list[dict] = []       # products seen this turn (for UI cards)
+        self._turn_actions: list[dict] = []        # purchase/blocked actions this turn
 
     # ------------------------------------------------------------------
     # Tool implementations
@@ -170,11 +172,15 @@ class MerchantAgent:
             products = [p for p in products if p["category"] == category]
         if max_price is not None:
             products = [p for p in products if p["price"] <= max_price]
+        public = [_public(p) for p in products]
+        # Collect for UI rendering
+        for p in public:
+            self._turn_products.append({**p, "source": "catalog"})
         log_event("browse_catalog", {
             "filters": {"category": category, "max_price": max_price},
             "results_count": len(products),
         })
-        return [_public(p) for p in products]
+        return public
 
     def tool_suggest_upsell(self, purchased_product_id):
         product = catalog_store.get_product(purchased_product_id)
@@ -188,6 +194,12 @@ class MerchantAgent:
             return {"status": "no_suggestion", "note": "No natural complement found."}
 
         self.last_suggestion = {"for": purchased_product_id, "product": suggestion["product"]}
+        # Collect for UI rendering
+        self._turn_products.append({
+            **_public(suggestion["product"]),
+            "source": "upsell",
+            "reason": suggestion["reason"],
+        })
         payload = {
             "status": "suggestion",
             "product": _public(suggestion["product"]),
@@ -264,6 +276,14 @@ class MerchantAgent:
                 "reason": decision.reason,
                 "requires_confirmation": decision.requires_confirmation,
             }
+            self._turn_actions.append({
+                "action": "blocked",
+                "product_id": product_id,
+                "product_name": product["name"],
+                "price": charge_price,
+                "reason": decision.reason,
+                "rule_triggered": decision.rule_triggered,
+            })
             if is_upsell and decision.allowed is False:
                 pass
             return result
@@ -307,6 +327,18 @@ class MerchantAgent:
                 "order": result,
             })
             self.last_suggestion = None
+            self._turn_actions.append({
+                "action": "purchased",
+                "product_id": product_id,
+                "product_name": product["name"],
+                "price": charge_price,
+                "original_price": pricing["original_price"],
+                "discount": pricing["discount_amount"],
+                "order_id": order["id"],
+                "stock_left": updated["stock"],
+                "was_upsell": is_upsell,
+                "was_campaign": pricing["campaign"],
+            })
             return result
 
         except Exception as e:
@@ -322,7 +354,11 @@ class MerchantAgent:
     # Conversation loop (Gemini function calling via Chat API)
     # ------------------------------------------------------------------
 
-    def chat(self, user_message: str) -> str:
+    def chat(self, user_message: str) -> tuple[str, dict]:
+        """Return (text_reply, structured_data) where structured_data contains
+        products and actions seen during this conversation turn."""
+        self._turn_products = []
+        self._turn_actions = []
         try:
             while True:
                 response = None
@@ -338,7 +374,8 @@ class MerchantAgent:
                             continue
                         raise
                 if response is None:
-                    return "(agent error, handled gracefully: rate limit exceeded after retries)"
+                    return ("(agent error, handled gracefully: rate limit exceeded after retries)",
+                            {"products": [], "actions": []})
 
                 candidate = response.candidates[0]
                 parts = candidate.content.parts if candidate.content else []
@@ -354,7 +391,10 @@ class MerchantAgent:
 
                 # If no function calls, return final text response
                 if not function_call_parts:
-                    return reasoning_text or ""
+                    return (reasoning_text or "", {
+                        "products": self._turn_products,
+                        "actions": self._turn_actions,
+                    })
 
                 # Execute each function call
                 for fc_part in function_call_parts:
@@ -387,16 +427,23 @@ class MerchantAgent:
                     )
 
         except Exception as e:
-            return f"(agent error, handled gracefully: {e})"
+            return (f"(agent error, handled gracefully: {e})", {
+                "products": self._turn_products,
+                "actions": self._turn_actions,
+            })
 
 
 def run_agent(user_message: str):
     """CLI wrapper - one throwaway conversation, printed to stdout."""
     agent = MerchantAgent()
     log_event("session_start", {"user_message": user_message})
-    reply = agent.chat(user_message)
+    reply, structured = agent.chat(user_message)
     log_event("session_end", {"final_response": reply})
     print("\nAgent:", reply)
+    if structured.get("products"):
+        print("\nProducts seen:", len(structured["products"]))
+    if structured.get("actions"):
+        print("Actions taken:", len(structured["actions"]))
 
 
 if __name__ == "__main__":
