@@ -51,6 +51,7 @@ class SessionState:
     """Tracks per-session counters used by rate-limiting rules."""
     transactions_this_session: int = 0
     total_spent: float = 0.0
+    trust_score: float = 75.0
 
 
 def evaluate_transaction(
@@ -69,6 +70,7 @@ def evaluate_transaction(
     stock = product.get("stock", 0)
 
     mandate = _build_mandate()
+    mandate["adaptive"] = calculate_trust_adjusted_limit(session)
 
     # Rule 1: category allow-list
     if category not in ALLOWED_CATEGORIES:
@@ -134,3 +136,57 @@ def evaluate_transaction(
         rule_triggered=None,
         mandate=mandate,
     )
+
+
+# ---------------------------------------------------------------------------
+# Adaptive Trust Score (additive layer on top of the static rules above)
+# ---------------------------------------------------------------------------
+# A dynamic, per-session trust signal (0-100, starts at 75 in the trusted
+# tier so a fresh session gets the maximum spending latitude for a smooth demo). It does
+# NOT replace any of the 5 hard rules — it is an ADDITIONAL dimension exposed
+# via the mandate so external buyers see how much latitude the session has.
+# ---------------------------------------------------------------------------
+
+def _trust_tier(score: float) -> str:
+    """Classify a trust score into a human-readable tier."""
+    if score >= 75:
+        return "trusted"
+    if score < 40:
+        return "restricted"
+    return "established"
+
+
+def calculate_trust_adjusted_limit(session: SessionState) -> dict:
+    """
+    Compute a trust-adjusted spending ceiling based on the session's current
+    trust score. Trusted sessions get more room, suspicious ones get tighter.
+    Returns the adjusted ceiling, the multiplier used, and trust metadata.
+    """
+    if session.trust_score >= 75:
+        multiplier = 1.5
+        tier = "trusted"
+    elif session.trust_score < 40:
+        multiplier = 0.5
+        tier = "restricted"
+    else:
+        multiplier = 1.0
+        tier = "established"
+
+    adjusted = MAX_TRANSACTION_AMOUNT * multiplier
+    return {
+        "adjusted_ceiling": adjusted,
+        "multiplier": multiplier,
+        "trust_score": session.trust_score,
+        "trust_tier": tier,
+    }
+
+
+def update_trust_score(session: SessionState, outcome: str) -> None:
+    """
+    Adjust the session's trust score based on observed behavior.
+    - "purchased": +5 (cap at 100)
+    - "blocked":   -4 (floor at 0)
+    - "browse":    +2 (small positive signal, cap at 100)
+    """
+    delta = {"purchased": 5, "blocked": -4, "browse": 2}.get(outcome, 0)
+    session.trust_score = max(0.0, min(100.0, session.trust_score + delta))

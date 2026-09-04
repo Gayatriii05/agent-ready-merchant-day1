@@ -125,6 +125,9 @@ body::before {
 
 .pill-live { color: var(--success); }
 .pill-test { color: var(--text-secondary); }
+.pill-trust { color: var(--warning, #f59e0b); }
+.pill-trust.tier-trusted { color: var(--success, #10b981); }
+.pill-trust.tier-restricted { color: #ef4444; }
 
 .dot {
   width: 6px; height: 6px; border-radius: 50%;
@@ -652,9 +655,161 @@ body::before {
   75% { opacity: 1; }
   100% { opacity: 0; transform: translateY(-6px); }
 }
+/* ================= compliance report modal ================= */
+
+.compliance-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.compliance-modal {
+  background: var(--bg-secondary); border: var(--panel-border);
+  border-radius: 12px; width: 90%; max-width: 640px; max-height: 80vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+.compliance-modal-head {
+  padding: 16px 20px; border-bottom: 1px solid var(--border-subtle);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.compliance-modal-head h3 {
+  font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700;
+  color: var(--text-primary); margin: 0;
+}
+.compliance-close-btn {
+  background: none; border: none; cursor: pointer; font-size: 18px;
+  color: var(--text-secondary); padding: 4px 8px; border-radius: 6px;
+  transition: background 0.15s ease;
+}
+.compliance-close-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+.compliance-modal-body {
+  flex: 1; overflow-y: auto; padding: 20px;
+}
+
+.compliance-narrative {
+  background: var(--bg-elevated); border-left: 3px solid var(--accent-primary);
+  border-radius: 6px; padding: 12px 16px; margin-bottom: 16px;
+  font-size: 13px; line-height: 1.6; color: var(--text-primary);
+}
+
+.compliance-stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
+}
+.compliance-stat {
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+  border-radius: 8px; padding: 10px 14px;
+}
+.compliance-stat-label {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-secondary); font-weight: 600;
+}
+.compliance-stat-value {
+  font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700;
+  color: var(--text-primary); margin-top: 2px;
+}
+
+.compliance-violations {
+  margin-bottom: 16px;
+}
+.compliance-violations h4 {
+  font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-secondary); margin-bottom: 8px;
+}
+.compliance-violations ul {
+  list-style: none; padding: 0; margin: 0;
+}
+.compliance-violations li {
+  display: flex; justify-content: space-between; padding: 6px 10px;
+  font-size: 12px; border-bottom: 1px solid var(--border-subtle);
+}
+.compliance-violations li:last-child { border-bottom: none; }
+.violation-count {
+  font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+  color: var(--danger);
+}
+
+.compliance-download {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+  color: var(--accent-primary); text-decoration: none; font-weight: 600;
+  padding: 8px 14px; border: 1px solid var(--accent-primary); border-radius: 8px;
+  transition: all 0.15s ease;
+}
+.compliance-download:hover {
+  background: var(--accent-primary); color: #ffffff;
+}
+
+.compliance-empty {
+  text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 13px;
+}
+
+/* ============ subtle color + glow enhancements (additive) ============ */
+
+/* Soft drifting color orbs behind the page */
+.glow-orb { position: fixed; border-radius: 50%; filter: blur(70px); z-index: -1; opacity: 0.5; pointer-events: none; }
+.glow-orb.a { width: 420px; height: 420px; top: -90px; left: -90px; background: radial-gradient(circle, var(--accent-primary), transparent 70%); animation: orbA 14s ease-in-out infinite alternate; }
+.glow-orb.b { width: 380px; height: 380px; bottom: -70px; right: -70px; background: radial-gradient(circle, var(--accent-secondary), transparent 70%); animation: orbB 18s ease-in-out infinite alternate; }
+.glow-orb.c { width: 300px; height: 300px; top: 40%; left: 55%; background: radial-gradient(circle, rgba(217,119,6,0.5), transparent 70%); animation: orbC 22s ease-in-out infinite alternate; }
+@keyframes orbA { from { transform: translate(0,0) scale(1); } to { transform: translate(80px,60px) scale(1.15); } }
+@keyframes orbB { from { transform: translate(0,0) scale(1); } to { transform: translate(-90px,-50px) scale(1.2); } }
+@keyframes orbC { from { transform: translate(0,0); } to { transform: translate(-70px,40px); } }
+
+/* Gradient modal headers for Reports / Session Replay */
+.compliance-modal-head {
+  background: linear-gradient(120deg, var(--accent-primary), var(--accent-secondary));
+  position: relative;
+}
+.compliance-modal-head h3 { color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.compliance-modal-head::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.22) 50%, transparent 80%);
+  transform: translateX(-100%); animation: headShine 3.2s ease-in-out infinite;
+}
+@keyframes headShine { 0% { transform: translateX(-100%); } 60%,100% { transform: translateX(100%); } }
+.compliance-close-btn { color: rgba(255,255,255,0.9); }
+.compliance-close-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* Stat cards: soft glow + gentle entrance + accent tint */
+.stat-card { animation: cardIn 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+.stat-card:nth-child(1) { animation-delay: .05s; } .stat-card:nth-child(2) { animation-delay: .12s; }
+.stat-card:nth-child(3) { animation-delay: .19s; } .stat-card:nth-child(4) { animation-delay: .26s; }
+#card-sales { background-image: linear-gradient(135deg, rgba(99,102,241,0.08), transparent 60%); }
+#card-upsell { background-image: linear-gradient(135deg, rgba(16,185,129,0.08), transparent 60%); }
+#card-campaign { background-image: linear-gradient(135deg, rgba(245,158,11,0.08), transparent 60%); }
+#card-blocked { background-image: linear-gradient(135deg, rgba(244,63,94,0.08), transparent 60%); }
+@keyframes cardIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Compliance stat cells: colored accents */
+.compliance-stat:nth-child(1) { border-left: 3px solid var(--success); }
+.compliance-stat:nth-child(2) { border-left: 3px solid var(--danger); }
+.compliance-stat:nth-child(3) { border-left: 3px solid var(--accent-primary); }
+.compliance-stat:nth-child(4) { border-left: 3px solid var(--warning); }
+.compliance-stat:nth-child(5) { border-left: 3px solid var(--accent-secondary); }
+.compliance-stat:nth-child(6) { border-left: 3px solid var(--success); }
+
+/* Primary buttons: gentle animated glow */
+button#sendBtn, button.primary-action {
+  background: linear-gradient(120deg, var(--accent-primary), var(--accent-secondary));
+  box-shadow: 0 6px 18px var(--accent-glow);
+  transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+}
+button#sendBtn:hover, button.primary-action:hover { transform: translateY(-1px); box-shadow: 0 10px 26px var(--accent-glow); filter: brightness(1.05); }
+
   </style>
 </head>
 <body>
+
+  <!-- soft drifting color orbs (decorative background) -->
+  <div class="glow-orb a"></div>
+  <div class="glow-orb b"></div>
+  <div class="glow-orb c"></div>
 
   <!-- ======== Header ======== -->
   <header class="topbar">
@@ -668,6 +823,7 @@ body::before {
     <div class="header-right">
       <span class="pill pill-live"><span class="dot"></span>LIVE</span>
       <span class="pill pill-test">RAZORPAY TEST MODE</span>
+      <span class="pill pill-trust" id="trustPill" title="Adaptive trust score">TRUST: 75/100</span> 
       <button id="themeToggleBtn" class="btn btn-ghost" title="Toggle Theme" aria-label="Toggle Theme">
         <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
         <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
@@ -746,12 +902,44 @@ body::before {
           <h2>Audit Trail</h2>
           <span class="sub">agent intent + policy mandate &rarr; as it happens</span>
           <button class="btn btn-ghost btn-export" id="exportBtn">Export Audit Log</button>
+          <button class="btn btn-ghost btn-export" id="complianceBtn" title="Generate a business/compliance summary">Compliance Report</button>
+          <button class="btn btn-ghost btn-export" id="replayBtn" title="Replay this session as a plain-English story">Session Replay</button>
         </div>
         <div id="auditList" class="audit-list"></div>
       </div>
 
     </section>
   </main>
+
+  <!-- ======== Compliance Report Modal ======== -->
+  <div class="compliance-overlay" id="complianceOverlay" style="display:none;">
+    <div class="compliance-modal">
+      <div class="compliance-modal-head">
+        <h3>Compliance Report</h3>
+        <button class="compliance-close-btn" id="complianceCloseBtn" title="Close">&times;</button>
+      </div>
+      <div class="compliance-modal-body" id="complianceBody">
+        <div class="compliance-empty">Loading compliance report...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== Session Replay Modal ======== -->
+  <div class="compliance-overlay" id="replayOverlay" style="display:none;">
+    <div class="compliance-modal">
+      <div class="compliance-modal-head">
+        <h3>Session Replay</h3>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-ghost btn-export" id="replayRefreshBtn" title="Refresh the replay with the latest events">Refresh</button>
+          <button class="compliance-close-btn" id="replayCloseBtn" title="Close">&times;</button>
+        </div>
+      </div>
+      <div class="compliance-modal-body" id="replayBody">
+        <div class="compliance-empty">Loading session replay...</div>
+      </div>
+    </div>
+  </div>
+
 
 <script>
 /* Agent-Ready Merchant - frontend logic (inlined) */
@@ -878,6 +1066,10 @@ function showThinking() {
     '<span class="thinking-label">Agent is thinking...</span>';
   $("chatWindow").appendChild(div);
   $("chatWindow").scrollTop = $("chatWindow").scrollHeight;
+  setTimeout(function() {
+    var el = document.querySelector("#thinkingIndicator .thinking-label");
+    if (el) el.textContent = "Agent is thinking... (this can take a few seconds)";
+  }, 5000);
 }
 
 async function sendMessage(text) {
@@ -898,6 +1090,18 @@ async function sendMessage(text) {
     localStorage.setItem("arm_session_id", sessionId);
 
     $("thinkingIndicator")?.remove();
+
+    if (data.trust_score != null) {
+      var pill = $("trustPill");
+      if (pill) {
+        var ts = Math.round(data.trust_score);
+        pill.textContent = "TRUST: " + ts + "/100";
+        pill.classList.remove("tier-trusted", "tier-restricted");
+        if (ts >= 75) pill.classList.add("tier-trusted");
+        else if (ts < 40) pill.classList.add("tier-restricted");
+      }
+    }
+
     const isError = /handled gracefully|failed/i.test(data.reply || "");
     const hasCards = (data.products && data.products.length > 0) ||
                      (data.actions && data.actions.length > 0);
@@ -1402,8 +1606,8 @@ function drawRevenueChart() {
     var lastPt = visibleData[visibleData.length - 1];
     var lx = pad.left + (chartW / (displayData.length - 1)) * (visibleData.length - 1);
     var ly = pad.top + chartH - (lastPt.total / maxVal) * chartH;
-    var pulseRadius = 6 + 3 * Math.sin(performance.now() / 400);
-    var pulseAlpha = 0.25 + 0.15 * Math.sin(performance.now() / 400);
+    var pulseRadius = 8 + 5 * Math.sin(performance.now() / 380);
+    var pulseAlpha = 0.35 + 0.25 * Math.sin(performance.now() / 380);
     ctx.beginPath();
     ctx.arc(lx, ly, pulseRadius, 0, Math.PI * 2);
     ctx.fillStyle = hexToRgba(accentColor.replace(/\s/g, ""), pulseAlpha);
@@ -1423,7 +1627,7 @@ function drawRevenueChart() {
     var shimmerX = pad.left + ((performance.now() / 25) % (chartW + 120)) - 60;
     var shimmerGrad = ctx.createLinearGradient(shimmerX - 60, 0, shimmerX + 60, 0);
     shimmerGrad.addColorStop(0, "rgba(255,255,255,0)");
-    shimmerGrad.addColorStop(0.5, "rgba(255,255,255,0.06)");
+    shimmerGrad.addColorStop(0.5, "rgba(255,255,255,0.16)");
     shimmerGrad.addColorStop(1, "rgba(255,255,255,0)");
 
     ctx.save();
@@ -1455,8 +1659,14 @@ function drawRevenueChart() {
 
 /* ---- animate chart continuously (pulsing + shimmer) ---- */
 function animateChart() {
-  drawRevenueChart();
-  requestAnimationFrame(animateChart);
+  // Redraw EVERY frame regardless of whether metrics changed so the shimmer /
+  // pulse keep moving even between purchases. The re-queue lives in `finally`
+  // so the loop can never be killed by an error inside drawRevenueChart().
+  try {
+    drawRevenueChart();
+  } finally {
+    requestAnimationFrame(animateChart);
+  }
 }
 
 /* ---- ticker: add flat data point every 3s when no real changes ---- */
@@ -1588,6 +1798,183 @@ async function exportAuditLog() {
 
 var exportBtn = $("exportBtn");
 if (exportBtn) exportBtn.addEventListener("click", exportAuditLog);
+
+/* ================= compliance report ================= */
+
+function formatInr(n) {
+  return "\u20B9" + Number(n || 0).toLocaleString("en-IN");
+}
+
+function statCell(label, value) {
+  return '<div class="compliance-stat">' +
+         '<div class="compliance-stat-label">' + label + '</div>' +
+         '<div class="compliance-stat-value">' + value + '</div></div>';
+}
+
+function renderComplianceReport(report) {
+  var s = report.summary;
+  var body = $("complianceBody");
+  if (!body) return;
+
+  var html = '';
+
+  if (s.total_actions === 0) {
+    html += '<div class="compliance-empty">No audit events recorded yet. Activity from the shopping agent will appear here.</div>';
+  } else {
+    html += '<div class="compliance-narrative">' + escapeHtml(report.narrative || "") + '</div>';
+
+    html += '<div class="compliance-stats">' +
+      statCell("Purchases Completed", s.purchases_completed) +
+      statCell("Purchases Blocked", s.purchases_blocked) +
+      statCell("Total Revenue", formatInr(s.total_revenue)) +
+      statCell("Value Blocked", formatInr(s.total_value_blocked)) +
+      statCell("Total Actions", s.total_actions) +
+      statCell("Confirmations", s.confirmation_required_count) +
+      '</div>';
+
+    var violations = s.policy_violations_by_rule || {};
+    var vKeys = Object.keys(violations);
+    if (vKeys.length > 0) {
+      html += '<div class="compliance-violations"><h4>Policy Violations by Rule</h4><ul>';
+      vKeys.forEach(function(rule) {
+        html += '<li><span>' + escapeHtml(rule.replace(/_/g, " ")) + '</span>' +
+                '<span class="violation-count">' + violations[rule] + '</span></li>';
+      });
+      html += '</ul></div>';
+    } else {
+      html += '<div class="compliance-violations"><h4>Policy Violations by Rule</h4>' +
+              '<p class="compliance-empty" style="padding:12px">No policy violations recorded.</p></div>';
+    }
+
+    var trajectory = s.trust_score_trajectory || [];
+    if (trajectory.length > 0) {
+      var first = Math.round(trajectory[0]);
+      var last = Math.round(trajectory[trajectory.length - 1]);
+      html += '<div class="compliance-violations"><h4>Trust Score Trajectory</h4>' +
+              '<div class="compliance-narrative" style="margin-bottom:0">Trust moved from ' + first +
+              ' to ' + last + ' across ' + trajectory.length + ' policy decision(s).</div></div>';
+    }
+
+    html += '<div style="margin-top:16px"><a class="compliance-download" href="/compliance-report/download" ' +
+            'target="_blank" rel="noopener">&#11015; Download Report (HTML)</a></div>';
+  }
+
+  body.innerHTML = html;
+}
+
+function openComplianceReport() {
+  var overlay = $("complianceOverlay");
+  var body = $("complianceBody");
+  if (!overlay || !body) return;
+  overlay.style.display = "flex";
+  body.innerHTML = '<div class="compliance-empty">Generating report...</div>';
+
+  fetch("/compliance-report")
+    .then(function(res) { return res.json(); })
+    .then(function(report) { renderComplianceReport(report); })
+    .catch(function() {
+      body.innerHTML = '<div class="compliance-empty">Could not generate the compliance report.</div>';
+    });
+}
+
+function closeComplianceReport() {
+  var overlay = $("complianceOverlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+var complianceBtn = $("complianceBtn");
+if (complianceBtn) complianceBtn.addEventListener("click", openComplianceReport);
+
+var complianceCloseBtn = $("complianceCloseBtn");
+if (complianceCloseBtn) complianceCloseBtn.addEventListener("click", closeComplianceReport);
+
+var complianceOverlay = $("complianceOverlay");
+if (complianceOverlay) {
+  complianceOverlay.addEventListener("click", function(e) {
+    if (e.target === complianceOverlay) closeComplianceReport();
+  });
+}
+
+
+/* ================= session replay ================= */
+
+function renderSessionReplay(data) {
+  var body = $("replayBody");
+  var story = (data && data.story) || [];
+  if (!story.length) {
+    body.innerHTML = '<div class="compliance-empty">No audit events recorded yet. Replay will populate as session activity occurs.</div>';
+    return;
+  }
+  var html = '<div class="compliance-narrative" style="margin-bottom:12px">' +
+             '<strong>' + story.length + '</strong> steps replayed below.</div>' +
+             '<ol style="font-size:0.92rem;line-height:1.7;padding-left:20px;margin:0">';
+  for (var i = 0; i < story.length; i++) {
+    var line = story[i];
+    var tsHtml = '<span style="opacity:0.7;font-size:0.8rem">[' + escapeHtml(line.time || "") + ']</span> ';
+    if (line.event_type === "grouped") {
+      html += '<li style="margin-bottom:8px">' + tsHtml + '<strong>' + escapeHtml(line.text || "") + '</strong></li>';
+    } else {
+      var label = line.event_type.replace(/_/g, " ").replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+      html += '<li style="margin-bottom:8px">' + tsHtml +
+              '<span style="opacity:0.7;font-size:0.8rem">' + label + ':</span> ' +
+              escapeHtml(line.text || "") + '</li>';
+    }
+  }
+  html += '</ol>';
+  body.innerHTML = html;
+}
+
+function loadSessionReplay() {
+  var overlay = $("replayOverlay");
+  var body = $("replayBody");
+  if (!overlay || !body) return;
+  overlay.style.display = "flex";
+  body.innerHTML = '<div class="compliance-empty">Generating session replay...</div>';
+  fetch("/session-replay")
+    .then(function(res) { return res.json(); })
+    .then(function(data) { renderSessionReplay(data); })
+    .catch(function() {
+      body.innerHTML = '<div class="compliance-empty">Could not generate the session replay.</div>';
+    });
+}
+
+function openSessionReplay() {
+  loadSessionReplay();
+}
+
+function refreshSessionReplay() {
+  var body = $("replayBody");
+  if (body) body.innerHTML = '<div class="compliance-empty">Refreshing...</div>';
+  fetch("/session-replay")
+    .then(function(res) { return res.json(); })
+    .then(function(data) { renderSessionReplay(data); })
+    .catch(function() {
+      var b = $("replayBody");
+      if (b) b.innerHTML = '<div class="compliance-empty">Could not refresh the session replay.</div>';
+    });
+}
+
+function closeSessionReplay() {
+  var overlay = $("replayOverlay");
+  if (overlay) overlay.style.display = "none";
+}
+
+var replayBtn = $("replayBtn");
+if (replayBtn) replayBtn.addEventListener("click", openSessionReplay);
+
+var replayCloseBtn = $("replayCloseBtn");
+if (replayCloseBtn) replayCloseBtn.addEventListener("click", closeSessionReplay);
+
+var replayRefreshBtn = $("replayRefreshBtn");
+if (replayRefreshBtn) replayRefreshBtn.addEventListener("click", refreshSessionReplay);
+
+var replayOverlay = $("replayOverlay");
+if (replayOverlay) {
+  replayOverlay.addEventListener("click", function(e) {
+    if (e.target === replayOverlay) closeSessionReplay();
+  });
+}
+
 
 /* ================= theme toggle ================= */
 

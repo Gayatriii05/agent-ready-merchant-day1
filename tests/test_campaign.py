@@ -101,7 +101,12 @@ class TestActiveCampaigns:
             expected = offer["original_price"] - offer["discount_amount"]
             assert offer["final_price"] == expected
 
-    def test_polo_in_campaigns(self, catalog):
+    def test_polo_in_campaigns(self):
+        # Deterministic in-memory catalog, independent of live demo stock
+        # (real purchases drain stock and would otherwise break this test).
+        catalog = {"products": [
+            {"id": "prod_007", "name": "Striped Polo Shirt", "price": 799, "category": "apparel", "stock": 2},
+        ]}
         offers = get_active_campaigns(catalog)
         polo_offer = next((o for o in offers if o["product_id"] == "prod_007"), None)
         assert polo_offer is not None
@@ -110,12 +115,22 @@ class TestActiveCampaigns:
 
 
 class TestCampaignForProduct:
-    def test_eligible_product(self, catalog):
+    def test_eligible_product(self):
+        # Deterministic in-memory catalog, independent of live demo stock.
+        catalog = {"products": [
+            {"id": "prod_007", "name": "Striped Polo Shirt", "price": 799, "category": "apparel", "stock": 2},
+        ]}
         offer = get_campaign_for_product("prod_007", catalog)
         assert offer is not None
         assert offer["product_id"] == "prod_007"
 
-    def test_ineligible_product(self, catalog):
+    def test_ineligible_product(self):
+        # Use a deterministic catalog independent of live demo stock so this
+        # test never breaks after real purchases drain a product's stock.
+        catalog = {"products": [
+            {"id": "prod_004", "name": "Canvas Tote Bag", "price": 349, "stock": 20},
+            {"id": "prod_007", "name": "Striped Polo Shirt", "price": 799, "stock": 2},
+        ]}
         offer = get_campaign_for_product("prod_004", catalog)  # Tote Bag (stock=20)
         assert offer is None
 

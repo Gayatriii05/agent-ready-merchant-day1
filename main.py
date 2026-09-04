@@ -36,7 +36,9 @@ from agent.buyer_agent import BuyerAgent
 from catalog.store import load_catalog
 from logs.audit import read_log, clear_log
 from metrics.metrics import compute_metrics
-from gating.policy import _build_mandate
+from gating.policy import _build_mandate, SessionState, _trust_tier
+from gating.compliance_report import generate_compliance_report
+from gating.replay import build_replay
 
 app = FastAPI(
     title="Agent-Ready Merchant API",
@@ -78,6 +80,7 @@ class ChatResponse(BaseModel):
     reply: str
     products: list[dict] = []
     actions: list[dict] = []
+    trust_score: float | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +91,12 @@ class ChatResponse(BaseModel):
 def get_catalog():
     """Returns the full merchant catalog in agent-readable JSON."""
     return load_catalog()
+
+
+@app.get("/products")
+def get_products():
+    """Compatibility alias for clients that expect a /products endpoint."""
+    return load_catalog()["products"]
 
 
 @app.get("/catalog/{product_id}")
@@ -117,6 +126,11 @@ def get_policy():
             "discount_pct": CAMPAIGN_DISCOUNT_PCT,
         },
         "mandate": _build_mandate(),
+        "trust": {
+            "default_trust_score": SessionState().trust_score,
+            "trust_tier": _trust_tier(SessionState().trust_score),
+            "scale": "0-100, starts trusted at 75",
+        },
     }
 
 
@@ -136,6 +150,12 @@ def get_audit_log(after: int = 0):
         "total": len(events),
         "events": events[after:],
     }
+
+
+@app.get("/audit")
+def get_audit(after: int = 0):
+    """Compatibility alias for clients that expect /audit instead of /audit-log."""
+    return get_audit_log(after=after)
 
 
 @app.get("/metrics")
@@ -195,6 +215,7 @@ def export_audit_log(fmt: str = "json"):
         if events:
             # Flatten nested dicts for CSV
             flat_events = []
+            all_keys = []
             for ev in events:
                 flat = {}
                 for k, v in ev.items():
@@ -204,9 +225,11 @@ def export_audit_log(fmt: str = "json"):
                         flat[k] = json.dumps(v)
                     else:
                         flat[k] = v
+                    if k not in all_keys:
+                        all_keys.append(k)
                 flat_events.append(flat)
 
-            writer = csv.DictWriter(output, fieldnames=flat_events[0].keys())
+            writer = csv.DictWriter(output, fieldnames=all_keys, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(flat_events)
         else:
@@ -225,6 +248,108 @@ def export_audit_log(fmt: str = "json"):
             media_type="application/json",
             headers={"Content-Disposition": "attachment; filename=audit_trail.json"},
         )
+
+
+# ---------------------------------------------------------------------------
+# Compliance report
+# ---------------------------------------------------------------------------
+
+@app.get("/compliance-report")
+def compliance_report():
+    """
+    Generate a business/compliance summary of the current audit log.
+    Returns structured summary statistics plus a plain-English narrative.
+    """
+    events = read_log()
+    return generate_compliance_report(events)
+
+
+@app.get("/session-replay")
+def session_replay():
+    """
+    Replay the session's audit trail as a numbered, plain-English story,
+    so a reviewer can follow exactly what happened in order.
+    """
+    events = read_log()
+    return build_replay(events)
+
+
+@app.get("/compliance-report/download")
+def compliance_report_download(fmt: str = "html"):
+    """
+    Download the compliance report as a formatted file.
+    reportlab/fpdf are not dependencies, so we produce a clean self-contained
+    HTML report (printable to PDF from any browser) rather than a real .pdf.
+    """
+    events = read_log()
+    report = generate_compliance_report(events)
+    s = report["summary"]
+
+    flags_html = ""
+    violations = s["policy_violations_by_rule"]
+    if violations:
+        rows = "".join(
+            f"<tr><td>{rule.replace('_', ' ')}</td><td>{count}</td></tr>"
+            for rule, count in sorted(violations.items())
+        )
+        flags_html = (
+            "<h3>Policy Violations by Rule</h3>"
+            "<table><tr><th>Rule</th><th>Count</th></tr>" + rows + "</table>"
+        )
+    else:
+        flags_html = "<p class='muted'>No policy violations recorded.</p>"
+
+    trajectory_rows = "".join(
+        f"<li>Trust score: {ts:.0f}</li>" for ts in s["trust_score_trajectory"]
+    )
+
+    html = f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Compliance Report - Agent-Ready Merchant</title>
+<style>
+  body {{ font-family: Arial, sans-serif; margin: 40px; color: #1f2937; }}
+  h1 {{ font-size: 22px; border-bottom: 2px solid #6366f1; padding-bottom: 8px; }}
+  h2 {{ font-size: 16px; color: #4f46e5; margin-top: 24px; }}
+  h3 {{ font-size: 14px; margin-top: 18px; }}
+  table {{ border-collapse: collapse; width: 60%; margin-top: 8px; }}
+  th, td {{ border: 1px solid #e5e7eb; padding: 6px 10px; text-align: left; }}
+  th {{ background: #f3f4f6; }}
+  .summary p {{ margin: 4px 0; }}
+  .narrative {{ background: #eef2ff; border-left: 4px solid #6366f1;
+    padding: 12px 16px; margin: 16px 0; font-style: italic; }}
+  .muted {{ color: #6b7280; }}
+  .meta {{ color: #6b7280; font-size: 12px; margin-top: 24px; }}
+</style></head>
+<body>
+<h1>Compliance Report &mdash; Agent-Ready Merchant</h1>
+
+<div class="narrative">{report["narrative"]}</div>
+
+<h2>Summary</h2>
+<div class="summary">
+  <p><strong>Total actions:</strong> {s["total_actions"]}</p>
+  <p><strong>Purchases completed:</strong> {s["purchases_completed"]}</p>
+  <p><strong>Purchases blocked:</strong> {s["purchases_blocked"]}</p>
+  <p><strong>Total revenue:</strong> &#8377;{s["total_revenue"]:,.0f}</p>
+  <p><strong>Total value blocked:</strong> &#8377;{s["total_value_blocked"]:,.0f}</p>
+  <p><strong>Confirmations required:</strong> {s["confirmation_required_count"]}</p>
+</div>
+
+{flags_html}
+
+<h2>Trust Score Trajectory</h2>
+<ul>
+  {"".join(trajectory_rows) if trajectory_rows else "<li class='muted'>No policy decisions recorded yet.</li>"}
+</ul>
+
+<p class="meta">Generated at {report["generated_at"]} &middot; Agent-Ready Merchant</p>
+</body></html>"""
+
+    return Response(
+        content=html,
+        media_type="text/html",
+        headers={"Content-Disposition": "attachment; filename=compliance_report.html"},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -252,6 +377,7 @@ def chat(req: ChatRequest):
         reply=reply,
         products=structured.get("products", []),
         actions=structured.get("actions", []),
+        trust_score=agent.session.trust_score,
     )
 
 
@@ -289,4 +415,23 @@ def health():
 
 if __name__ == "__main__":
     import uvicorn
+
+    def _warm_up_gemini():
+        """Best-effort: establish the TLS connection + model router for the
+        primary model while the server starts, so the FIRST user chat isn't
+        slowed by an ~11s cold Gemini call. Never blocks startup and never
+        crashes the app (a warm-up failure just means the first chat is slower)."""
+        import threading
+        import os
+        from dotenv import load_dotenv
+        from agent.agent import MODEL, client
+        load_dotenv()
+        if not os.getenv("GEMINI_API_KEY"):
+            return
+        try:
+            client.models.generate_content(model=MODEL, contents="ping")
+        except Exception:
+            pass
+
+    threading.Thread(target=_warm_up_gemini, daemon=True).start()
     uvicorn.run(app, host="0.0.0.0", port=8000)

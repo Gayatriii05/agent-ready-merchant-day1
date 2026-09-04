@@ -26,7 +26,7 @@
       "name": "White Sneakers",
       "category": "footwear",
       "price": 2299,
-      "stock": 8,
+      "stock": 1,
       "description": "Minimalist white sneakers, true to size."
     },
     {
@@ -34,7 +34,7 @@
       "name": "Canvas Tote Bag",
       "category": "accessories",
       "price": 349,
-      "stock": 13,
+      "stock": 0,
       "description": "Durable canvas tote, natural color."
     },
     {
@@ -58,7 +58,7 @@
       "name": "Striped Polo Shirt",
       "category": "apparel",
       "price": 799,
-      "stock": 2,
+      "stock": 0,
       "description": "Navy and white striped polo, breathable cotton. Low stock - good candidate for a clearance push."
     },
     {
@@ -82,7 +82,7 @@
       "name": "Ankle Socks (Pack of 3)",
       "category": "accessories",
       "price": 249,
-      "stock": 29,
+      "stock": 26,
       "description": "Cotton blend ankle socks, pack of 3, great add-on item."
     },
     {
